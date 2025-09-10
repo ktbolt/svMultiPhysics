@@ -178,7 +178,7 @@ if (SV_BUILD_VTK)
 )
 
 file(GLOB VTK_LIBRARIES "${CMAKE_BINARY_DIR}/vtk-install/lib/*.a")
-set(VTK_INCLUDE "${CMAKE_BINARY_DIR}/vtk-install/include/vtk-4.9")
+set(VTK_INCLUDE "${CMAKE_BINARY_DIR}/vtk-install/include/vtk-9.4")
 
 # Include VTK either from a local build using SV_LOCAL_VTK_PATH
 # or from a default installed version.
@@ -297,6 +297,8 @@ simvascular_add_executable(${SV_MULTIPHYSICS_EXE}
   INSTALL_SCRIPT_NAME "svmultiphysics"
   INSTALL_COMP CoreExecutables
   INSTALL_DESTINATION ${SV_INSTALL_RUNTIME_DIR})
+
+add_dependencies(${SV_MULTIPHYSICS_EXE} vtk-external)
 
 include_directories(${SV_MULTIPHYSICS_EXE} PRIVATE ${CMAKE_BINARY_DIR}/vtk-install/include/vtk-9.4)
 
