@@ -77,6 +77,7 @@ set(SV_PETSC_DIR "" CACHE STRING "Path to a local install of the PETSc linear al
 set(ENABLE_COVERAGE OFF CACHE BOOL "Enable code coverage")
 set(ENABLE_ARRAY_INDEX_CHECKING OFF CACHE BOOL "Enable Array index checking")
 set(SV_LOCAL_VTK_PATH "" CACHE STRING "Path to a local build of VTK.")
+set(SV_BUILD_VTK OFF CACHE BOOL "Enable downloading and building VTK within the project.")
 set(ENABLE_UNIT_TEST OFF CACHE BOOL "Enable Unit Test by Google Test")
 
 #-----------------------------------------------------------------------------
@@ -141,6 +142,7 @@ ExternalProject_Add(svMultiPhysics
     -DENABLE_UNIT_TEST:BOOL=${ENABLE_UNIT_TEST}
     -DENABLE_ARRAY_INDEX_CHECKING:BOOL=${ENABLE_ARRAY_INDEX_CHECKING}
     -DSV_LOCAL_VTK_PATH:STRING=${SV_LOCAL_VTK_PATH}
+    -DSV_BUILD_VTK:BOOL=${SV_BUILD_VTK}
     ${SV_APPLE_CMAKE_ARGS}
     ${SV_ADDITIONAL_CMAKE_ARGS}
     )
