@@ -133,52 +133,14 @@ endif()
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 
-# Download and build VTK 9.4.0.
+# Download and build VTK as an internal package that 
+# is part of the svMultiPhysics build.
+# 
+# Creates an external project named 'vtk-internal-build'
 #
-if (SV_BUILD_VTK) 
+if (SV_INTERNAL_VTK_BUILD) 
 
-  ExternalProject_Add(
-    vtk-external
-    GIT_REPOSITORY https://github.com/Kitware/VTK.git
-    GIT_TAG 35fb2ed4843d1bee5e069a7fbfbfea82b98dab6d
-    SOURCE_DIR "${CMAKE_BINARY_DIR}/vtk-source"
-    BINARY_DIR "${CMAKE_BINARY_DIR}/vtk-build"
-    INSTALL_DIR "${CMAKE_BINARY_DIR}/vtk-install"
-    CMAKE_ARGS
-        -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/vtk-install
-        -DBUILD_SHARED_LIBS:BOOL=OFF
-        -DCMAKE_BUILD_TYPE:STRING=RELEASE
-        -DBUILD_EXAMPLES=OFF
-        -DBUILD_TESTING=OFF
-        -DVTK_USE_SYSTEM_EXPAT:BOOL=OFF
-        -DVTK_USE_SYSTEM_ZLIB:BOOL=OFF
-        -DVTK_LEGACY_REMOVE=ON
-        -DVTK_Group_Rendering=OFF
-        -DVTK_Group_StandAlone=OFF
-        -DVTK_RENDERING_BACKEND=None
-        -DVTK_WRAP_PYTHON=OFF
-        -DModule_vtkChartsCore=ON
-        -DModule_vtkCommonCore=ON
-        -DModule_vtkCommonDataModel=ON
-        -DModule_vtkCommonExecutionModel=ON
-        -DModule_vtkFiltersCore=ON
-        -DModule_vtkFiltersFlowPaths=ON
-        -DModule_vtkFiltersModeling=ON
-        -DModule_vtkIOLegacy=ON
-        -DModule_vtkIOXML=ON
-        -DVTK_GROUP_ENABLE_Views=NO
-        -DVTK_GROUP_ENABLE_Web=NO
-        -DVTK_GROUP_ENABLE_Imaging=NO
-        -DVTK_GROUP_ENABLE_Qt=DONT_WANT
-        -DVTK_GROUP_ENABLE_Rendering=DONT_WANT
-    UPDATE_COMMAND ""
-    #CONFIGURE_COMMAND <SOURCE_DIR>/configure
-    BUILD_COMMAND make -j6
-    #INSTALL_COMMAND <BINARY_DIR>/install
-)
-
-file(GLOB VTK_LIBRARIES "${CMAKE_BINARY_DIR}/vtk-install/lib/*.a")
-set(VTK_INCLUDE "${CMAKE_BINARY_DIR}/vtk-install/include/vtk-9.4")
+  include(vtk-internal-build.cmake)
 
 # Include VTK either from a local build using SV_LOCAL_VTK_PATH
 # or from a default installed version.
@@ -298,9 +260,12 @@ simvascular_add_executable(${SV_MULTIPHYSICS_EXE}
   INSTALL_COMP CoreExecutables
   INSTALL_DESTINATION ${SV_INSTALL_RUNTIME_DIR})
 
-add_dependencies(${SV_MULTIPHYSICS_EXE} vtk-external)
-
-include_directories(${SV_MULTIPHYSICS_EXE} PRIVATE ${CMAKE_BINARY_DIR}/vtk-install/include/vtk-9.4)
+# Enable building and installing vtk before compiling svMultiPhysics code.
+if (SV_INTERNAL_VTK_BUILD) 
+  add_dependencies(${SV_MULTIPHYSICS_EXE} vtk-internal-build)
+  include_directories(${SV_MULTIPHYSICS_EXE} PRIVATE ${VTK_INCLUDE})
+  target_link_directories(${SV_MULTIPHYSICS_EXE} PRIVATE ${VTK_BUILD_INSTALL_LIB})
+endif()
 
 target_link_libraries(${SV_MULTIPHYSICS_EXE}
   ${GLOBAL_LIBRARIES}
