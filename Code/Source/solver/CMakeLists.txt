@@ -265,7 +265,14 @@ if (SV_INTERNAL_VTK_BUILD)
   add_dependencies(${SV_MULTIPHYSICS_EXE} vtk-internal-build)
   include_directories(${SV_MULTIPHYSICS_EXE} PRIVATE ${VTK_INCLUDE})
   target_link_directories(${SV_MULTIPHYSICS_EXE} PRIVATE ${VTK_BUILD_INSTALL_LIB})
+  message(STATUS "---------------------------------------")
+  message(STATUS "VTK_LIBRARIES: ${VTK_LIBRARIES}")
+  #message(FATAL_ERROR "---------------------------------------")
 endif()
+
+#file(GLOB VTK_LIBRARIES "${CMAKE_BINARY_DIR}/vtk-install/lib/*.a")
+message(STATUS "VTK_LIBRARIES: ${VTK_LIBRARIES}")
+#message(FATAL_ERROR "---------------------------------------")
 
 target_link_libraries(${SV_MULTIPHYSICS_EXE}
   ${GLOBAL_LIBRARIES}
