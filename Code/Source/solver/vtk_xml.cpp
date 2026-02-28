@@ -454,6 +454,42 @@ void read_vtp(const std::string& file_name, faceType& face)
   }
 }
 
+/// @brief Read in integer cell array data named `kwrd` from a VTK VTU file. 
+///
+void read_vtu_cdata(const std::string& fName, const std::string& kwrd, Vector<int>& tmpR, 
+    mshType& mesh, Simulation* simulation)
+{
+  if (FILE *file = fopen(fName.c_str(), "r")) {
+    fclose(file);
+  } else {
+    throw std::runtime_error("The VTK VTU pressure data file '" + fName + "' can't be read.");
+  }
+
+  // Read the vtu file.
+  auto vtk_data = VtkData::create_reader(fName);
+
+  if (vtk_data == nullptr) {
+    throw std::runtime_error("Failed to create VTK reader for file: " + fName);
+  }
+
+  int num_elems = vtk_data->num_elems();
+  int num_points = vtk_data->num_points();
+  std::cout << "[read_vtu_cdata] num_elems: " << num_elems << std::endl;
+
+  if (num_elems != mesh.gnEl) {
+    throw std::runtime_error("The number of elements (" + std::to_string(num_elems) +
+        ") in the file '" + fName + "' is not equal to the number of elements ("
+        + std::to_string(mesh.gnEl) + ") for the mesh named '" + mesh.name + "'.");
+  }
+
+  if (!vtk_data->has_cell_data(kwrd)) {
+    throw std::runtime_error("No CellData DataArray named '" + kwrd +
+        "' found in the VTK file '" + fName + "' for the mesh named '" + mesh.name + "'.");
+  }
+
+  vtk_data->copy_cell_data(kwrd, tmpR);
+}
+
 //----------------
 // read_vtp_pdata
 //----------------
