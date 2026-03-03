@@ -2086,9 +2086,9 @@ void set_dmn_id_ff(Simulation* simulation, mshType& lM, const std::string& file_
   }
 }
 
-/// @brief Read mesh domains from a vtu/vtp file.
+/// @brief Read mesh domains from a vtk vtu/vtp file.
 ///
-void set_dmn_id_vtk(Simulation* simulation, mshType& lM, const std::string& file_name, const std::string& kwrd)
+void set_dmn_id_vtk(Simulation* simulation, mshType& lM, const std::string& file_name, const std::string& data_name)
 {
   #define n_debug_set_dmn_id_vtk
   #ifdef debug_set_dmn_id_vtk
@@ -2102,18 +2102,16 @@ void set_dmn_id_vtk(Simulation* simulation, mshType& lM, const std::string& file
     lM.eId.resize(lM.gnEl);
   }
 
-  Vector<int> tmpR(lM.gnEl);
-    
-  vtk_xml::read_vtu_cdata(file_name, kwrd, tmpR, lM, simulation);
+  Vector<int> element_data(lM.gnEl);
+  vtk_xml::read_element_data(lM, file_name, data_name, element_data);
 
   for (int a = 0; a < lM.gnEl; a++) {
-      lM.eId(a) = lM.eId(a) | (1UL << tmpR(a));
-      //std::cout << "[set_dmn_id_vtk] a: " << a+1 << " " << tmpR(a) << std::endl;
+    lM.eId(a) = lM.eId(a) | (1UL << element_data(a));
   }
 
 }
 
-/// @brief This routines associates two faces with each other and sets gN.
+/// @brief Associate two faces with each other and set gN.
 ///
 /// Data set
 /// \code {.cpp}
