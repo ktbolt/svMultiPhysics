@@ -2608,19 +2608,21 @@ MeshParameters::MeshParameters()
   //set_parameter("Fiber_direction", {}, !required, fiber_direction);
   set_parameter("Fiber_direction_file_path", {}, !required, fiber_direction_file_paths);
 
-  set_parameter("Mesh_file_path", "", !required, mesh_file_path);
-  set_parameter("Mesh_scale_factor", 1.0, !required, mesh_scale_factor);
-  set_parameter("Prestress_file_path", "", !required, prestress_file_path);
-
   set_parameter("Include_xml", "", !required, include_xml);
   set_parameter("Initial_displacements_file_path", "", !required, initial_displacements_file_path);
   set_parameter("Initial_pressures_file_path", "", !required, initial_pressures_file_path);
   set_parameter("Initial_velocities_file_path", "", !required, initial_velocities_file_path);
 
+  set_parameter("Mesh_file_path", "", !required, mesh_file_path);
+  set_parameter("Mesh_material_properties_file_path", "", !required, mesh_material_properties_file_path);
+  set_parameter("Mesh_scale_factor", 1.0, !required, mesh_scale_factor);
+
+  set_parameter("Prestress_file_path", "", !required, prestress_file_path);
+  set_parameter("Quadrature_modifier_TET4", (5.0+3.0*sqrt(5.0))/20.0, !required, quadrature_modifier_TET4);
+
   set_parameter("Set_mesh_as_fibers", false, !required, set_mesh_as_fibers);
   set_parameter("Set_mesh_as_shell", false, !required, set_mesh_as_shell);
 
-  set_parameter("Quadrature_modifier_TET4", (5.0+3.0*sqrt(5.0))/20.0, !required, quadrature_modifier_TET4);
 }
 
 void MeshParameters::print_parameters()

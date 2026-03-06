@@ -514,6 +514,73 @@ void read_vtp_pdata(const std::string& fName, const std::string& kwrd, const int
   }
 }
 
+//-------------------------------
+// read_mesh_material_properties
+//-------------------------------
+// Read in mesh material properties data from a VTK VTU file.
+//
+void read_mesh_material_properties(const std::string& file_name, mshType& mesh)
+{
+  #define debug_read_mesh_material_properties
+  #ifdef debug_read_mesh_material_properties
+  DebugMsg dmsg(__func__, 0);
+  dmsg.banner();
+  dmsg << "file_name: " << file_name;
+  #endif
+
+  if (FILE *file = fopen(file_name.c_str(), "r")) {
+      fclose(file);
+  } else {
+    throw std::runtime_error("The VTK VTU mesh material properties file '" + file_name + "' can't be read.");
+  }
+
+  auto vtk_data = VtkData::create_reader(file_name);
+  int num_elems = vtk_data->num_elems();
+  int num_points = vtk_data->num_points();
+  #ifdef debug_read_mesh_material_properties
+  dmsg << "num_elems: " << num_elems;
+  dmsg << "num_points: " << num_points;
+  #endif
+
+  if (num_points != mesh.gnNo) {
+    throw std::runtime_error("The number of nodes (" + std::to_string(num_points) +
+        ") in the mesh material properties VTK file '" + file_name + "' is not equal to the number of nodes ("
+        + std::to_string(mesh.gnNo) + ") for the mesh named '" + mesh.name + "'.");
+  }
+
+  if (num_elems != mesh.gnEl) {
+    throw std::runtime_error("The number of elemenst (" + std::to_string(num_elems) +
+        ") in the mesh material properties VTK file '" + file_name + "' is not equal to the number of elements ("
+        + std::to_string(mesh.gnEl) + ") for the mesh named '" + mesh.name + "'.");
+  }
+
+ auto& material_properties = mesh.material_properties;
+
+ #ifdef debug_read_mesh_material_properties
+ dmsg << "Data names " << " ... ";
+ #endif
+ auto data_names = vtk_data->get_point_data_names();
+ for (auto& property_name : data_names) { 
+   if (!material_properties.is_known_property(property_name)) {
+     continue;
+   }
+   #ifdef debug_read_mesh_material_properties
+   dmsg << "   add property data: " << property_name;
+   #endif
+   Vector<double> data(num_points);
+   vtk_data->copy_point_data(property_name, data);
+   material_properties.set_data(property_name, data);
+ }
+
+ auto value = material_properties.get_elasticity_modulus(0, 12345.0);
+ #ifdef debug_read_mesh_material_properties
+ dmsg << "value: " << value;
+ #endif
+
+ auto [density, elasticity_modulus, poisson_ration] = material_properties.get_elasticity_data();
+
+}
+
 //----------
 // read_vtu
 //----------

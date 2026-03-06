@@ -1578,6 +1578,16 @@ void read_msh(Simulation* simulation)
     }
   }
 
+  // Read mesh material properties data.
+
+  for (int iM = 0; iM < com_mod.nMsh; iM++) {
+    auto& mesh_param = simulation->parameters.mesh_parameters[iM];
+    if (mesh_param->mesh_material_properties_file_path.defined()) {
+      auto file_name = mesh_param->mesh_material_properties_file_path();
+      vtk_xml::read_mesh_material_properties(file_name, com_mod.msh[iM]);
+    }
+  }
+
   // Read prestress data.
   //
   flag = false;

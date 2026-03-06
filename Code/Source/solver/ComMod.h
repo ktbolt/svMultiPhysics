@@ -863,6 +863,38 @@ class cplBCType
     std::vector<cplFaceType> fa;
 };
 
+/// @brief Stores material properties defined on mesh nodes.
+//
+class MeshMaterialProperties
+{
+  enum class MaterialPropertyType
+  {
+    density,
+    elasticity_modulus,
+    poisson_ratio,
+    unknown
+  };
+
+  static const std::map<std::string,MaterialPropertyType> property_names;
+
+  public:
+    Vector<double> density;
+    Vector<double> elasticity_modulus;
+    Vector<double> poisson_ratio;
+    bool are_defined = false;
+
+    std::map<MaterialPropertyType,Vector<double>> property_data;
+
+    bool is_known_property(const std::string& property_names);
+    void set_data(const std::string& property_name, Vector<double>& data);
+
+    double get_elasticity_modulus(int index, double default_value);
+
+    std::tuple<Vector<double>, Vector<double>, Vector<double>> get_elasticity_data() {
+      return {density, elasticity_modulus, poisson_ratio};
+    };
+};
+
 /// @brief This is the container for a mesh or NURBS patch, those specific
 /// to NURBS are noted
 //
@@ -1063,6 +1095,9 @@ class mshType
 
     /// @brief TET4 quadrature modifier
     double qmTET4 = (5.0+3.0*sqrt(5.0))/20.0;
+
+    /// @brief Material properties defined on mesh nodes.
+    MeshMaterialProperties material_properties;
 
   private:
     //mshType(const mshType&);

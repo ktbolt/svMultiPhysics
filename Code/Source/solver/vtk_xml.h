@@ -14,6 +14,8 @@ void do_test();
 
 void int_msh_data(const ComMod& com_mod, const CmMod& cm_mod, const mshType& lM, dataType& d, const int outDof, const int nOute);
 
+void read_mesh_material_properties(const std::string& file_name, mshType& mesh);
+
 void read_vtp(const std::string& file_name, faceType& face);
 
 void read_vtp_pdata(const std::string& fName, const std::string& kwrd, const int nsd, const int m, const int idx, faceType& face);

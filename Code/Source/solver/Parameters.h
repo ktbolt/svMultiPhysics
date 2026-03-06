@@ -1558,6 +1558,7 @@ class MeshParameters : public ParameterLists
 
     Parameter<std::string> mesh_file_path;
     Parameter<double> mesh_scale_factor;
+    Parameter<std::string> mesh_material_properties_file_path;
     Parameter<std::string> prestress_file_path;
 
     Parameter<bool> set_mesh_as_fibers;

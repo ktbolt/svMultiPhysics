@@ -39,6 +39,8 @@ class VtkData {
     virtual void copy_point_data(const std::string& data_name, Vector<double>& mesh_data) = 0;
     virtual void write() = 0;
 
+    virtual std::vector<std::string> get_point_data_names() = 0;
+
     static VtkData* create_reader(const std::string& file_name);
     static VtkData* create_writer(const std::string& file_name);
 

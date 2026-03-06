@@ -167,6 +167,52 @@ void fsType::destroy()
   Nxx.clear();
 }
 
+/////////////////////////////////////////////////
+// M e s h M a t e r i a l P r o p e r t i e s //
+/////////////////////////////////////////////////
+
+const std::map<std::string,MeshMaterialProperties::MaterialPropertyType> MeshMaterialProperties::property_names = {
+  {"Density", MaterialPropertyType::density},
+  {"Elasticity_modulus",  MaterialPropertyType::elasticity_modulus},
+  {"Poisson_ratio", MaterialPropertyType::poisson_ratio},
+};
+
+bool MeshMaterialProperties::is_known_property(const std::string& property_name)
+{
+  return property_names.count(property_name);
+}
+
+double MeshMaterialProperties::get_elasticity_modulus(int index, double default_value)
+{
+  if (property_data.count(MaterialPropertyType::elasticity_modulus) == 0) {
+    return default_value;
+  }
+
+  return property_data[MaterialPropertyType::elasticity_modulus][index];
+}
+
+void MeshMaterialProperties::set_data(const std::string& property_name, Vector<double>& data)
+{
+  auto property_type = property_names.at(property_name);
+  property_data[property_type] = data;
+
+ /*
+
+  using PropertyMapType = std::map<MaterialPropertyType, std::function<void(Vector<double>&)>>;
+
+  PropertyMapType set_data = {
+      {MaterialPropertyType::density, [](Vector<double>& data) -> void {
+      }
+    },
+
+  };
+  */
+
+
+
+
+}
+ 
 ///////////////////
 // m s h T y p e //
 ///////////////////
