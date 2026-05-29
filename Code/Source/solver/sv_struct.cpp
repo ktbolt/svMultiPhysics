@@ -28,8 +28,7 @@ void b_struct_2d(const ComMod& com_mod, const int eNoN, const double w, const Ve
   double dt = com_mod.dt;
   int dof = com_mod.dof;
 
-  double af = eq.af * eq.gam*dt;
-  double afm = af / eq.am;
+  double af = eq.af * eq.beta * dt *dt;
   int i = eq.s;
   int j = i + 1;
 
