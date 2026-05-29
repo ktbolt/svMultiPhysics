@@ -47,10 +47,19 @@ namespace mat_fun {
 
     // Function to convert a higher-dimensional array like Dm
     template <typename MatrixType>
-    void copy_Dm(const MatrixType& mat, Array<double>& dest, int rows, int cols) {
-        for (int i = 0; i < rows; ++i)
-            for (int j = 0; j < cols; ++j)
+    void copy_Dm(const MatrixType& mat, Array<double>& dest) {
+        if ((mat.rows() != dest.nrows()) ||
+           (mat.cols() != dest.ncols())) { 
+          std::string mat_dims = "(" + std::to_string(mat.rows()) + "x" + std::to_string(mat.cols()) + ")";
+          std::string dest_dims = "(" + std::to_string(dest.nrows()) + "x" + std::to_string(dest.ncols()) + ")";
+          throw std::runtime_error("[copy_Dm] The 'mat" + mat_dims + "' and 'dest" + dest_dims + "' arrays have incompatible sizes.");
+        }
+
+        for (int i = 0; i < mat.rows(); ++i) {
+            for (int j = 0; j < mat.cols(); ++j) {
                 dest(i, j) = mat(i, j);
+            }
+        }
     }
 
     template <int nsd>

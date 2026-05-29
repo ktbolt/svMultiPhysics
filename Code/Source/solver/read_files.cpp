@@ -194,13 +194,20 @@ void read_bc(Simulation* simulation, EquationParameters* eq_params, eqType& lEq,
   // Allocate traction
   auto& com_mod = simulation->com_mod;
   lBc.h.resize(com_mod.nsd);
-
-  // [NOTE] Direction vectors can only have three values.
-  //
-  lBc.eDrn.resize(com_mod.nsd);
+  
+  // Set effective direction data.
   auto effective_direction = bc_params->effective_direction();
-  for (int i = 0; i <  effective_direction.size(); i++) {
-    lBc.eDrn[i] = effective_direction[i];
+
+  if (effective_direction.size() != 0) {
+    if (effective_direction.size() != com_mod.nsd) {
+      throw std::runtime_error("[read_bc] The size of the effective direction (" + std::to_string(effective_direction.size()) +
+        ") does not equal the number of space dimentions (" + std::to_string(com_mod.nsd) + ".");
+    }
+
+    lBc.eDrn.resize(com_mod.nsd);
+    for (int i = 0; i <  effective_direction.size(); i++) {
+      lBc.eDrn[i] = effective_direction[i];
+    }
   }
 
   auto ctmp = bc_params->time_dependence.value();
