@@ -196,6 +196,7 @@ void read_bc(Simulation* simulation, EquationParameters* eq_params, eqType& lEq,
   lBc.h.resize(com_mod.nsd);
   
   // Set effective direction data.
+  lBc.eDrn.resize(com_mod.nsd);
   auto effective_direction = bc_params->effective_direction();
 
   if (effective_direction.size() != 0) {
@@ -204,7 +205,6 @@ void read_bc(Simulation* simulation, EquationParameters* eq_params, eqType& lEq,
         ") does not equal the number of space dimentions (" + std::to_string(com_mod.nsd) + ".");
     }
 
-    lBc.eDrn.resize(com_mod.nsd);
     for (int i = 0; i <  effective_direction.size(); i++) {
       lBc.eDrn[i] = effective_direction[i];
     }
