@@ -204,7 +204,7 @@ void read_bc(Simulation* simulation, EquationParameters* eq_params, eqType& lEq,
       auto effective_size = (std::stringstream() << "(" << effective_direction.size() << ")").str();
       auto space_dim = (std::stringstream() << "(" << com_mod.nsd << ")").str();
       svmp::raise<svmp::ParseException>(SVMP_HERE, "The size of the effective direction " + effective_size + 
-          " does not equal the number of space dimentions " + space_dim); 
+          " does not equal the number of space dimensions " + space_dim); 
     }
 
     for (int i = 0; i <  effective_direction.size(); i++) {
