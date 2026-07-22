@@ -7,7 +7,7 @@
 // All of the data structures used for the mesh, boundarsy conditions and solver parameters, etc. 
 // are defined here.
 
-#ifndef COMMOD_H 
+#ifndef COMMOD_H
 #define COMMOD_H
 
 #include "Array.h"
@@ -22,6 +22,7 @@
 #include "SolutionStates.h"
 #include "Timer.h"
 #include "Vector.h"
+#include "active_stress.h"
 
 #include "DebugMsg.h"
 
@@ -278,31 +279,6 @@ class bfType
     MBType bm;
 };
 
-// Fiber stress type
-class fibStrsType
-{
-  public:
-
-    // Type of fiber stress
-    int fType = 0;
-
-    // Constant steady value
-    double g = 0.0;
-
-    // Directional stress distribution parameters
-    // Fraction of active stress in fiber direction (default: 1.0)
-    double eta_f = 1.0;
-    
-    // Fraction of active stress in sheet direction (default: 0.0)
-    double eta_s = 0.0;
-    
-    // Fraction of active stress in sheet-normal direction (default: 0.0)
-    double eta_n = 0.0;
-
-    // Unsteady time-dependent values
-    FourierInterpolation gt;
-};
-
 /// @brief Structural domain type
 //
 class stModelType
@@ -345,9 +321,6 @@ class stModelType
     double b1 = 0.0;
     double b2 = 0.0;
     double mu0 = 0.0;
-
-    // Fiber reinforcement stress
-    fibStrsType Tf;
 
     // CANN Model/UAnisoHyper_inv
     ArtificialNeuralNetMaterial paramTable;
@@ -419,6 +392,12 @@ class dmnType
 
     // Electrophysiology model
     cepModelType cep;
+
+    /// Active stress model name.
+    std::string active_stress_model_name = "";
+
+    /// Active stress model.
+    std::shared_ptr<ActiveStress> active_stress;
 
     // Structure material model
     stModelType stM;
