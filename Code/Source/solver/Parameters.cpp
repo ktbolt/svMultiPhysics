@@ -471,8 +471,12 @@ void BoundaryConditionRCRParameters::set_values(tinyxml2::XMLElement* xml_elem)
 CouplingInterfaceParameters::CouplingInterfaceParameters()
 {
   bool required = false;
-  set_parameter("svZeroDSolver_block", "", !required, svzerod_solver_block);
-  set_parameter("Chamber_cap_surface", "", !required, chamber_cap_surface);
+  set_parameter("svZeroDSolver_block",    "", !required, svzerod_solver_block);
+  set_parameter("Chamber_cap_surface",    "", !required, chamber_cap_surface);
+  set_parameter("svOneDSolver_input_file","", !required, svoned_input_file);
+  set_parameter("Ramp_steps",       0,   !required, coupling_ramp_steps);
+  set_parameter("Ramp_ref_pressure", 0.0, !required, coupling_ramp_ref_pressure);
+  set_parameter("Relax_factor",  1.0, !required, coupling_relax_factor);
 }
 
 void CouplingInterfaceParameters::set_values(tinyxml2::XMLElement* xml_elem)
@@ -1180,6 +1184,37 @@ void svZeroDSolverInterfaceParameters::set_values(tinyxml2::XMLElement* xml_elem
 }
 
 //////////////////////////////////////////////////////////
+//           svOneDSolverInterfaceParameters            //
+//////////////////////////////////////////////////////////
+
+const std::string svOneDSolverInterfaceParameters::xml_element_name_ = "svOneDSolver_interface";
+
+svOneDSolverInterfaceParameters::svOneDSolverInterfaceParameters()
+{
+  bool required = true;
+
+  set_parameter("Coupling_type",  "", required,  coupling_type);
+  set_parameter("Shared_library", "", required,  shared_library);
+  // Unlike svZeroDSolver (which uses a single global Input_file for all faces),
+  // svOneDSolver requires each coupled face to supply its own input file.
+  // Per-face input files are specified via <Coupling_interface>
+  // <svOneDSolver_input_file> inside each <Add_BC> element.
+}
+
+void svOneDSolverInterfaceParameters::set_values(tinyxml2::XMLElement* xml_elem)
+{
+  std::string error_msg = "Unknown svOneDSolver_interface XML element '";
+
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+  std::function<void(const std::string&, const std::string&)> ftpr =
+      std::bind(&svOneDSolverInterfaceParameters::set_parameter_value, *this, _1, _2);
+  xml_util_set_parameters(ftpr, xml_elem, error_msg);
+
+  value_set = true;
+}
+
+//////////////////////////////////////////////////////////
 //                  OutputParameters                    //
 //////////////////////////////////////////////////////////
 
@@ -1814,7 +1849,9 @@ void DomainParameters::print_parameters()
 
   fiber_reinforcement_stress.print_parameters();
 
-  stimulus.print_parameters();
+  for (const auto& stim : stimuli) {
+    stim->print_parameters();
+  }
 
   for (const auto &[cepType, params] : ionic_models) {
     params->print_parameters();
@@ -1823,6 +1860,7 @@ void DomainParameters::print_parameters()
   fluid_viscosity.print_parameters();
 
   solid_viscosity.print_parameters();
+
 }
 
 //------------
@@ -1864,7 +1902,8 @@ void DomainParameters::set_values(tinyxml2::XMLElement* domain_elem, bool from_e
     }
 
     if (name == StimulusParameters::xml_element_name_) {
-      stimulus.set_values(item);
+      stimuli.emplace_back(std::make_unique<StimulusParameters>());
+      stimuli.back()->set_values(item);
       item_found = true;
     }
 
@@ -2495,6 +2534,9 @@ void EquationParameters::set_values(tinyxml2::XMLElement* eq_elem, DomainParamet
     } else if (name == svZeroDSolverInterfaceParameters::xml_element_name_) {
       svzerodsolver_interface_parameters.set_values(item);
 
+    } else if (name == svOneDSolverInterfaceParameters::xml_element_name_) {
+      svonedsolver_interface_parameters.set_values(item);
+
     } else if (name == DomainParameters::xml_element_name_) {
       auto domain_params = new DomainParameters();
       domain_params->set_values(item);
@@ -2515,7 +2557,8 @@ void EquationParameters::set_values(tinyxml2::XMLElement* eq_elem, DomainParamet
       remesher.set_values(item);
 
     } else if (name == StimulusParameters::xml_element_name_) {
-      domain->stimulus.set_values(item);
+      domain->stimuli.emplace_back(std::make_unique<StimulusParameters>());
+      domain->stimuli.back()->set_values(item);
 
     } else if (viscosity_names.count(name)) { 
       auto eq_type = require_map_value(consts::equation_name_to_type, type.value(),
