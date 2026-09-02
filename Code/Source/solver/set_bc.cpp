@@ -1571,7 +1571,14 @@ void set_bc_neu_l(ComMod& com_mod, const CmMod& cm_mod, const bcType& lBc, const
            }
          }     
         } else if (utils::btest(lBc.bType,iBC_res)) {
-       h(0) = lBc.r * all_fun::integ(com_mod, cm_mod, lFa, Yn, eq.s, solutions, eq.s+nsd-1, false, consts::MechanicalConfigurationType::reference);
+
+          double p_distal = 0.0;
+          //double p_distal = 11332.4;
+
+          h(0) = lBc.r * all_fun::integ(com_mod, cm_mod, lFa, Yn, eq.s, solutions, eq.s+nsd-1, false, consts::MechanicalConfigurationType::reference) + p_distal;
+
+       //std::cout << "##### lFa.name: " << lFa.name << std::endl;
+       //std::cout << "      lBc.r: " << lBc.r << std::endl;
 
      } else if (utils::btest(lBc.bType,iBC_std)) {
        h(0) = lBc.g;

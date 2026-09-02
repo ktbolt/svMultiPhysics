@@ -59,6 +59,7 @@ void init_from_bin(Simulation* simulation, const std::string& fName, std::array<
   auto& com_mod = simulation->com_mod;
   auto& cm = com_mod.cm;
   int task_id = cm.idcm();
+  #define debug_init_from_bin 
   #ifdef debug_init_from_bin 
   DebugMsg dmsg(__func__, com_mod.cm.idcm());
   dmsg.banner();
@@ -105,10 +106,20 @@ void init_from_bin(Simulation* simulation, const std::string& fName, std::array<
   auto& pS0 = com_mod.pS0;
   auto& Xion = cep_mod.Xion;
 
+  #ifdef debug_init_from_bin 
+  dmsg << "cplBC.xo.size(): " << cplBC.xo.size();
+  dmsg << "Yo.size(): " << Yo.msize();
+  dmsg << "Ao.size(): " << Ao.msize();
+  #endif
+
   output::read_restart_header(com_mod, tStamp, timeP[0], bin_file);
   bin_file.read((char*)cplBC.xo.data(), cplBC.xo.msize());
   bin_file.read((char*)Yo.data(), Yo.msize());
   bin_file.read((char*)Ao.data(), Ao.msize());
+
+  #ifdef debug_init_from_bin 
+  dmsg << "cplBC.xo: " << cplBC.xo;
+  #endif
 
   if (!ibFlag) {
 
@@ -316,6 +327,82 @@ void init_from_vtu(Simulation* simulation, const std::string& fName, std::array<
   Ao = all_fun::local(com_mod, cm_mod, cm, tmpA);
   Yo = all_fun::local(com_mod, cm_mod, cm, tmpY);
   Do = all_fun::local(com_mod, cm_mod, cm, tmpD);
+}
+
+//---------------------
+// initialize_rcr_data
+//---------------------
+//
+void initialize_rcr_data(Simulation* simulation, SolutionStates& solutions)
+{
+  #define debug_initialize_rcr_data 
+  #ifdef debug_initialize_rcr_data
+  DebugMsg dmsg(__func__, simulation->com_mod.cm.idcm());
+  dmsg.banner();
+  #endif
+  auto& Ao = solutions.old.get_acceleration();
+  auto& Do = solutions.old.get_displacement();
+  auto& Yo = solutions.old.get_velocity();
+     
+  auto& com_mod = simulation->com_mod;
+  auto& cm = com_mod.cm;
+  auto& cm_mod = simulation->cm_mod;
+  const int nsd = com_mod.nsd;
+  const int iEq = 0;
+  auto& eq = com_mod.eq[iEq];
+  auto& cplBC = com_mod.cplBC;
+    
+  #ifdef debug_initialize_rcr_data
+  dmsg << "Ao.size(): " << Ao.size();
+  dmsg << "Yo.size(): " << Yo.size();
+  dmsg << "eq.nBc: " << eq.nBc;
+  dmsg << "cplBC.nX: " << cplBC.nX;
+  #endif
+
+  for (int iBc = 0; iBc < eq.nBc; iBc++) {
+    #ifdef debug_initialize_rcr_data 
+    dmsg << "----- iBc " << iBc;
+    #endif
+    auto& bc = eq.bc[iBc];
+    int iFa = bc.iFa;
+    int iM = bc.iM;
+    int ptr = bc.cplBCptr;
+    #ifdef debug_initialize_rcr_data
+    dmsg << "iFa: " << iFa;
+    dmsg << "iM: " << iM;
+    dmsg << "ptr: " << ptr;
+    #endif
+
+    if (!utils::btest(bc.bType, consts::iBC_RCR)) {
+      continue;
+    }
+
+    auto& face = com_mod.msh[iM].fa[iFa];
+
+    #ifdef debug_initialize_rcr_data
+    dmsg << "Face name: " << face.name;
+    dmsg << "face.area: " << face.area;
+    dmsg << "bc.RCR.Rp: " << bc.RCR.Rp;
+    #endif
+
+    auto face_pressure = all_fun::integ(com_mod, cm_mod, face, Yo, nsd, solutions, 
+        std::nullopt, false, consts::MechanicalConfigurationType::reference);
+    face_pressure /= face.area;
+
+    auto face_flow = all_fun::integ(com_mod, cm_mod, face, Yo, 0, solutions, nsd-1, false,  
+        consts::MechanicalConfigurationType::reference);
+    face_flow /= face.area;
+
+    double rcr_init = face_pressure - face_flow * bc.RCR.Rp;
+    cplBC.xo[ptr] = rcr_init;
+
+    #ifdef debug_initialize_rcr_data
+    dmsg << "face_pressure: " << face_pressure;
+    dmsg << "face_flow: " << face_flow;
+    dmsg << "rcr_init: " << rcr_init;
+    #endif
+  }
+
 }
 
 /// @brief Initialize or finalize svFSI variables/structures.
@@ -923,7 +1010,10 @@ void initialize(Simulation* simulation, Vector<double>& timeP)
   // Create Integrator now that initial_solutions (Ao, Do, Yo) are fully initialized
   // The Integrator takes ownership via move semantics
   simulation->initialize_integrator(std::move(initial_solutions));
+
+  initialize_rcr_data(simulation, initial_solutions);
 }
+
 
 //-----------
 // zero_init
@@ -941,7 +1031,7 @@ void zero_init(Simulation* simulation, SolutionStates& solutions)
   auto& cm = com_mod.cm;
   const int nsd = com_mod.nsd;
 
-  #define n_debug_zero_init
+  #define debug_zero_init
   #ifdef debug_zero_init
   DebugMsg dmsg(__func__, com_mod.cm.idcm());
   dmsg.banner();
@@ -996,5 +1086,8 @@ void zero_init(Simulation* simulation, SolutionStates& solutions)
        }
      }
   }
+
 }
+
+
 
