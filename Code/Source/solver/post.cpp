@@ -923,8 +923,7 @@ void post(Simulation* simulation, const mshType& lM, Array<double>& res, const S
     for (int a = 0; a < lM.nNo; a++) {
       int Ac = lM.gN(a);
       double p  = lY(nsd,Ac);
-
-      auto u  = lY.col(Ac, {0,nsd-1});
+      auto u  = lY.col(Ac, {0,nsd});
       double unorm = utils::norm_squared(u);
       for (int i = 0; i < nsd; i++) {
         res(i,Ac) = (p + 0.5 * rho * unorm) * u(i);

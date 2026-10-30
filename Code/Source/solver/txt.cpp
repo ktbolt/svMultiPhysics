@@ -310,7 +310,7 @@ void txt(Simulation* simulation, const bool init_write, const SolutionStates& so
         case OutputNameType::outGrp_trac:
           post::all_post(simulation, tmpV, solutions, oGrp, iEq);
           for (int a = 0; a < tnNo; a++) {
-            auto vec = tmpV.col(a, {0,nsd-1});
+            auto vec = tmpV.col(a, {0,nsd});
             tmpV(0,a) = norm(vec);
           }
           l = 1;
