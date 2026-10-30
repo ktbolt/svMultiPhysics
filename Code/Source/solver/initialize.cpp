@@ -313,6 +313,79 @@ void init_from_vtu(Simulation* simulation, const std::string& fName, std::array<
   Do = all_fun::local(com_mod, cm_mod, cm, tmpD);
 }
 
+/// @brief Initialize data for RCR boundary conditions 
+///
+void initialize_rcr_data(Simulation* simulation, SolutionStates& solutions)
+{
+  #define n_debug_initialize_rcr_data 
+  #ifdef debug_initialize_rcr_data
+  DebugMsg dmsg(__func__, simulation->com_mod.cm.idcm());
+  dmsg.banner();
+  #endif
+  auto& Ao = solutions.old.get_acceleration();
+  auto& Do = solutions.old.get_displacement();
+  auto& Yo = solutions.old.get_velocity();
+     
+  auto& com_mod = simulation->com_mod;
+  auto& cm = com_mod.cm;
+  auto& cm_mod = simulation->cm_mod;
+  const int nsd = com_mod.nsd;
+  const int iEq = 0;
+  auto& eq = com_mod.eq[iEq];
+  auto& cplBC = com_mod.cplBC;
+    
+  #ifdef debug_initialize_rcr_data
+  dmsg << "Ao.size(): " << Ao.size();
+  dmsg << "Yo.size(): " << Yo.size();
+  dmsg << "eq.nBc: " << eq.nBc;
+  dmsg << "cplBC.nX: " << cplBC.nX;
+  #endif
+
+  for (int iBc = 0; iBc < eq.nBc; iBc++) {
+    #ifdef debug_initialize_rcr_data 
+    dmsg << "----- iBc " << iBc;
+    #endif
+    auto& bc = eq.bc[iBc];
+    int iFa = bc.iFa;
+    int iM = bc.iM;
+    int ptr = bc.cplBCptr;
+    #ifdef debug_initialize_rcr_data
+    dmsg << "iFa: " << iFa;
+    dmsg << "iM: " << iM;
+    dmsg << "ptr: " << ptr;
+    #endif
+
+    if (!utils::btest(bc.bType, consts::iBC_RCR)) {
+      continue;
+    }
+
+    auto& face = com_mod.msh[iM].fa[iFa];
+
+    #ifdef debug_initialize_rcr_data
+    dmsg << "Face name: " << face.name;
+    dmsg << "face.area: " << face.area;
+    dmsg << "bc.RCR.Rp: " << bc.RCR.Rp;
+    #endif
+
+    constexpr unsigned int unused_displacement_index = 0;
+    auto face_pressure = all_fun::integ(com_mod, cm_mod, face, Yo, nsd, solutions, 
+        std::nullopt, false, consts::MechanicalConfigurationType::reference, unused_displacement_index);
+    face_pressure /= face.area;
+
+    auto face_flow = all_fun::integ(com_mod, cm_mod, face, Yo, 0, solutions, nsd-1, false,  
+        consts::MechanicalConfigurationType::reference, unused_displacement_index);
+
+    double rcr_init = face_pressure - face_flow * bc.RCR.Rp;
+    cplBC.xo[ptr] = rcr_init;
+
+    #ifdef debug_initialize_rcr_data
+    dmsg << "face_pressure: " << face_pressure;
+    dmsg << "face_flow: " << face_flow;
+    dmsg << "rcr_init: " << rcr_init;
+    #endif
+  }
+}
+
 /// @brief Initialize or finalize svFSI variables/structures.
 ///
 /// \code {.cpp}
@@ -920,6 +993,11 @@ void initialize(Simulation* simulation, Vector<double>& timeP)
         uris_obj.valve_velocity_fluid = 0.0;
       }
     }
+  }
+
+  // If initial pressure and velocity have been given from a VTK file.
+  if ((com_mod.Pinit.size() != 0) && (com_mod.Vinit.size() != 0)) {
+    initialize_rcr_data(simulation, initial_solutions);
   }
 
   // Create Integrator now that initial_solutions (Ao, Do, Yo) are fully initialized
