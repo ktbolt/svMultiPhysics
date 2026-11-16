@@ -1,11 +1,56 @@
+ci_svzerodsolver_identity() {
+  local manifest="${1:-${GITHUB_WORKSPACE:-.}/release.json}"
+
+  python3 - "$manifest" <<'PY'
+import json
+import re
+import sys
+
+with open(sys.argv[1], encoding="utf-8") as manifest:
+    dependency = json.load(manifest)["dependencies"]["svZeroDSolver"]
+repository, tag, commit = (dependency[key] for key in ("repository", "tag", "commit"))
+if (repository != "SimVascular/svZeroDSolver"
+        or not isinstance(tag, str)
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", tag)
+        or not isinstance(commit, str)
+        or not re.fullmatch(r"[0-9a-f]{40}", commit)):
+    raise SystemExit("release.json must pin the official svZeroDSolver repository, a tag, and a full commit SHA")
+print(tag, commit)
+PY
+}
+
+ci_resolve_svzerodsolver() {
+  local manifest="${1:-${GITHUB_WORKSPACE:-.}/release.json}"
+  local tag commit remote_commit pinned
+
+  pinned=$(ci_svzerodsolver_identity "$manifest") || return 1
+  read -r tag commit <<< "$pinned"
+
+  local remote="https://github.com/SimVascular/svZeroDSolver.git"
+  remote_commit=$(git ls-remote "$remote" "refs/tags/$tag^{}" | awk 'NR == 1 { print $1 }') || return 1
+  if [[ -z "$remote_commit" ]]; then
+    remote_commit=$(git ls-remote --refs "$remote" "refs/tags/$tag" | awk 'NR == 1 { print $1 }') || return 1
+  fi
+  if [[ "$remote_commit" != "$commit" ]]; then
+    echo "svZeroDSolver tag $tag resolves to ${remote_commit:-nothing}, not pinned commit $commit" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$commit"
+}
+
 ci_build_svzerodsolver() {
   local jobs="$1"
+  local ref="${2:-}"
   local cmake_args=()
   if [ "${SVMP_OPTIMIZED_CI:-false}" = true ]; then
     cmake_args+=(-DCMAKE_BUILD_TYPE=Release)
   fi
 
   git clone https://github.com/SimVascular/svZeroDSolver.git
+  if [ -n "$ref" ]; then
+    git -C svZeroDSolver checkout --detach "$ref"
+  fi
   mkdir svZeroDSolver/build
   (
     cd svZeroDSolver/build
@@ -23,7 +68,7 @@ ci_build_solver() {
 
   local cmake_args=(-DENABLE_COVERAGE=ON -DENABLE_ARRAY_INDEX_CHECKING=ON)
   if [ "${SVMP_OPTIMIZED_CI:-false}" = true ]; then
-    cmake_args=(-DCMAKE_BUILD_TYPE=Release -DENABLE_COVERAGE=OFF -DENABLE_ARRAY_INDEX_CHECKING=OFF)
+    cmake_args=(-DCMAKE_BUILD_TYPE="${SVMP_CMAKE_BUILD_TYPE:-Release}" -DENABLE_COVERAGE=OFF -DENABLE_ARRAY_INDEX_CHECKING=OFF)
   fi
 
   mkdir "$build_dir"

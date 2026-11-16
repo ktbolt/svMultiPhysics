@@ -128,6 +128,12 @@ class Parameter
     /// @brief Set the parameter value from a string.
     void set(const std::string& str_value)
     {
+      if constexpr (std::is_same_v<T, std::string>) {
+        value_ = str_value.substr(0, str_value.find_last_not_of(" \t\r\n") + 1);
+        value_.erase(0, value_.find_first_not_of(" \t\r\n"));
+        value_set_ = true;
+        return;
+      }
       if (str_value == "") {
         value_ = T{0};
       }
@@ -1645,7 +1651,6 @@ class DomainParameters : public ParameterLists
     Parameter<std::string> id;
 
     Parameter<double> absolute_tolerance;
-    VectorParameter<double> anisotropic_conductivity;
     Parameter<double> backflow_stabilization_coefficient;
 
     Parameter<double> conductivity;
@@ -1666,7 +1671,18 @@ class DomainParameters : public ParameterLists
     Parameter<double> force_z;
 
     Parameter<std::string> include_xml;
+
+    /// Conductivities for CEP diffusion:
+    /// @f[
+    ///   D = D_\mathrm{iso}\, I
+    ///     + D_f\, f\otimes f
+    ///     + D_s\, s\otimes s
+    ///     + D_n\, n\otimes n.
+    /// @f]
     Parameter<double> isotropic_conductivity;
+    Parameter<double> fiber_conductivity;
+    Parameter<double> sheet_conductivity;
+    Parameter<double> sheet_normal_conductivity;
 
     Parameter<double> mass_damping;
     Parameter<int> maximum_iterations;
@@ -1753,6 +1769,54 @@ class ContactParameters : public ParameterLists
     Parameter<double> penalty_constant;
 };
 
+//----------------------
+// LineSearchParameters
+//----------------------
+/// @brief Parameters of the line search shortening the increments of the
+/// nonlinear iterations of an equation.
+///
+/// The line search is enabled by the presence of the XML element and disabled
+/// by its absence.
+///
+/// XML element: \code {.xml}
+/// <Line_search>
+///   <Minimum_decrease> 1.0e-4 </Minimum_decrease>
+///   <Step_reduction_factor> 0.5 </Step_reduction_factor>
+///   <Minimum_step_length> 0.015625 </Minimum_step_length>
+///   <Verbose> false </Verbose>
+/// </Line_search>
+/// \endcode
+//
+class LineSearchParameters : public ParameterLists
+{
+  public:
+    LineSearchParameters();
+
+    static const std::string xml_element_name_;
+
+    bool defined() const { return value_set; };
+    void set_values(tinyxml2::XMLElement* xml_elem);
+    void print_parameters();
+
+    /// @brief Decrease of the residual norm that a step length must achieve to
+    /// be accepted, as a fraction of the norm it starts from per unit step
+    /// length. Any value small enough accepts every step that decreases the
+    /// residual.
+    Parameter<double> minimum_decrease;
+
+    /// @brief Factor by which a rejected step length is multiplied.
+    Parameter<double> step_reduction_factor;
+
+    /// @brief Shortest step length that is tried. It is applied without being
+    /// measured, since there is no shorter one to fall back on.
+    Parameter<double> minimum_step_length;
+
+    /// @brief Report the step lengths that are rejected and accepted.
+    Parameter<bool> verbose;
+
+    bool value_set = false;
+};
+
 /// @brief The EquationParameters class stores parameters for the 'Add_equation'
 /// XML element used to specify an equation to be solved (e.g. fluid).
 ///
@@ -1827,6 +1891,8 @@ class EquationParameters : public ParameterLists
     std::vector<DomainParameters*> domains;
 
     LinearSolverParameters linear_solver;
+
+    LineSearchParameters line_search;
 
     std::vector<OutputParameters*> outputs;
 
@@ -1972,10 +2038,12 @@ class MeshParameters : public ParameterLists
     Parameter<int> domain_id;
     Parameter<std::string> domain_file_path;
 
-    VectorParameter<std::string> fiber_direction_file_paths;
-    //Parameter<std::string> fiber_direction_file_path;
-    std::vector<VectorParameter<double>> fiber_directions;
-    //VectorParameter<double> fiber_direction;
+    // Constant fiber directions from <Fiber_direction_constant>.
+    std::vector<VectorParameter<double>> fiber_direction_constant;
+    // Fiber VTU paths from <Fiber_direction_from_file_points>.
+    VectorParameter<std::string> fiber_direction_file_paths_points;
+    // Fiber VTU paths from <Fiber_direction_from_file_cells>.
+    VectorParameter<std::string> fiber_direction_file_paths_cells;
 
     Parameter<std::string> include_xml;
     Parameter<std::string> initial_displacements_file_path;

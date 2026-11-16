@@ -10,7 +10,9 @@ import xml.etree.ElementTree as ET
 import meshio
 
 this_file_dir = os.path.abspath(os.path.dirname(__file__))
-cpp_exec = os.path.join(this_file_dir, "..", "build", "svMultiPhysics-build", "bin", "svmultiphysics")
+cpp_exec = os.environ.get("SVMP_SOLVER_EXECUTABLE") or os.path.join(
+    this_file_dir, "..", "build", "svMultiPhysics-build", "bin", "svmultiphysics"
+)
 cpp_exec_p = os.path.join(this_file_dir, "..", "build-petsc", "svMultiPhysics-build", "bin", "svmultiphysics")
 
 
@@ -38,11 +40,15 @@ def cmake_cache_path_for(exe_path):
 # CMakeCache.txt of the corresponding build (PETSc tests use the separate build
 # at cpp_exec_p; Trilinos is linked into the main build at cpp_exec). PETSc is
 # enabled when SV_PETSC_DIR is a non-empty path, Trilinos when SV_USE_TRILINOS
-# is ON. A missing cache (e.g. the build does not exist) means "not available".
+# is ON. Package validation supplies the installed executable and configuration
+# explicitly because a clean test container has no CMake build cache.
 HAS_PETSC = bool(read_cmake_cache_variable(cmake_cache_path_for(cpp_exec_p), "SV_PETSC_DIR"))
-HAS_TRILINOS = (
-    read_cmake_cache_variable(cmake_cache_path_for(cpp_exec), "SV_USE_TRILINOS") or ""
-).upper() in ("ON", "1", "TRUE", "YES")
+if os.environ.get("SVMP_SOLVER_EXECUTABLE"):
+    HAS_TRILINOS = os.environ.get("SVMP_SOLVER_CONFIGURATION") == "trilinos"
+else:
+    HAS_TRILINOS = (
+        read_cmake_cache_variable(cmake_cache_path_for(cpp_exec), "SV_USE_TRILINOS") or ""
+    ).upper() in ("ON", "1", "TRUE", "YES")
 
 # Reusable markers to decorate PETSc/Trilinos tests at their definition site.
 skip_if_no_petsc = pytest.mark.skipif(
@@ -140,7 +146,7 @@ def n_proc(request):
     return request.param
 
 
-def run_by_name(folder, name, t_max, n_proc=1):
+def run_by_name(folder, name, t_max, n_proc=1, clean=True, timeout=None):
     """
     Run a test case and return results
     Args:
@@ -155,12 +161,12 @@ def run_by_name(folder, name, t_max, n_proc=1):
 
     # remove old results folders if they exist
     dir_path = os.path.join(folder, str(n_proc) + "-procs")
-    if os.path.exists(dir_path):
+    if clean and os.path.exists(dir_path):
         shutil.rmtree(dir_path)
 
     # run simulation (PETSc tests use a dedicated build; see cpp_exec_p)
     exe = cpp_exec_p if "petsc" in folder else cpp_exec
-    cmd = " ".join(
+    cmd = list(filter(None,
         [
             "mpirun",
             OVERSUBSCRIBE_FLAG if n_proc > 1 else "",
@@ -169,12 +175,12 @@ def run_by_name(folder, name, t_max, n_proc=1):
             exe,
             name,
         ]
-    )
+    ))
 
     # Run the command while capturing the return code and stderr output. This
     # way, if something goes wrong, we can raise an appropriate error message.
     completed = subprocess.run(
-        cmd, cwd=folder, shell=True, stderr=subprocess.PIPE, text=True
+        cmd, cwd=folder, stderr=subprocess.PIPE, text=True, timeout=timeout
     )
 
     # Print the captured stderr to console, so it is visible. Notice that this
@@ -208,6 +214,7 @@ def run_with_reference(
     name_ref=None,
     name_inp="solver.xml",
     check_time_value=True,
+    clean=True,
 ):
     """
     Run a test case and compare it to a stored reference solution
@@ -227,7 +234,7 @@ def run_with_reference(
 
     # run simulation
     folder = os.path.join("cases", base_folder, test_folder)
-    res = run_by_name(folder, name_inp, t_max, n_proc)
+    res = run_by_name(folder, name_inp, t_max, n_proc, clean)
 
     # read reference
     fname = os.path.join(folder, name_ref)
